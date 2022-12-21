@@ -1,0 +1,120 @@
+---
+title: "Spotify Genres Wrapped"
+output:
+  html_document:
+  toc: true
+---
+By Paul DeGraff and Kyle Truong
+  
+## Project Output {.tabset}
+  
+### Introduction
+  1. Problem
+
+How do genres compare against each other in today’s day and age? Music streaming companies such as Spotify use data from individual songs to make playlists accessible to the public. These playlists are created based on the popularity of genres of different songs. Our goal is to explore raw data and find information on the trends between genres and their popularity to the public.
+  
+  2. Data
+
+The data we are provided gives enough information to allow us to make comparisons across one genre to the next. These comparisons can be used in order to make predictions about things like what genres are on the rise, which are on the fall, which one's have been consistent over the last set of years, and which genres do not have quite enough information to make accurate predictions.
+
+The data set was collected in January 2020 using the spotifyr package. Over 30,000 songs were collected and 24 variables were made regarding the song. Variables ranging from the track name to the danceability of the songs were made and measured. The 6 genres that were collected are electronic dance music (EDM), Latin, pop, rap, R&B, and rock.
+
+3. Approach
+
+Visualizations are going to be the best approach to explaining the data as there is more than 30,000 observations. The visualizations will allow us to make comparisons easier than looking at raw data. The data will be broken down into both broad and specific groups in order to make good comparisons.
+
+4. Summary
+
+The summary will conclude what genres are hot or not and allow us and others to make predictions on what genres could use more or less focus in the coming years.
+
+### Packages Used
+The following packages were used in order to handle, manipulate, interpret, and visualize the date
+
+DT: Outputs data into visually appealing format
+
+Ggplot2: Used for plotting charts
+
+Gganimate: Used for animating the plot
+
+Tidyverse: Allows for pipe operators to pass through
+
+```{r, message = FALSE}
+library(DT)
+library(ggplot2)
+library(gganimate)
+library(tidyverse)
+```
+
+### Data Preparation
+For the data preparation, we got rid of the data that we did not need to use for our graphs to show how popular or what type of genre a song is. We then split the date of each song down to the year. We then changed the year from a character to a numeric so we could use the year as a variable on our graph. Then we cleared any year before 1990 from the data. Lastly, we grouped the years and genres together and took their mean popularity over time.
+
+Information regarding the original dataset can be found [here](https://github.com/rfordatascience/tidytuesday/blob/master/data/2020/2020-01-21/readme.md)
+```{r, warning = FALSE}
+spotify_songs <- read.csv('spotify_songs.csv')
+
+yr <- spotify_songs%>%separate(track_album_release_date,into =c("year","month","day",sep="-"))
+
+num <- as.numeric(yr[,8])
+yr[,8] <- num
+
+yr <- yr%>%
+  filter(year >= 1990)
+
+yr2 <- yr[,-(15:27)]
+yr2 <- yr2[,-(1:2)]
+yr2 <- yr2[,-(4:5)]
+yr2 <- yr2[,-(5:9)]
+
+
+genre_grouped <- yr%>%group_by(playlist_genre)
+
+year_by_genre_grouped <- genre_grouped%>%group_by(year)
+
+avg.pop.bygenre.byyear <- aggregate(year_by_genre_grouped$track_popularity, list(Genre=year_by_genre_grouped$playlist_genre,
+                                                        Year=year_by_genre_grouped$year),mean )
+```
+We then displayed the data in a visually appealing format.
+
+The popularity variable is numbered from 0 to 100, with 100 being the most popular and 0 being the least popular. 
+```{r, warning = FALSE}
+datatable(yr2, caption = "Tidy Data")
+```
+
+
+
+### Analysis
+By the use of ggplot and gganimate, we created an animated graph to show the popularity trends of 6 different music genres over the last thirty years of the data set.
+```{r, message = FALSE}
+pop_plot <- ggplot(
+  data=avg.pop.bygenre.byyear,
+  aes(Year, x, group = Genre, color = factor(Genre))) +
+  geom_line() +
+  geom_text(aes(x=2020.1,label=Genre, hjust=0)) +
+  geom_point(aes(group=seq_along(Year))) +
+  geom_point(size=2) +
+  geom_segment(aes(xend=2020,yend=x), linetype=2) +
+  transition_reveal(Year) +
+  scale_color_viridis_d() +
+  labs(x = "Year", y = "Popularity") +
+  theme(legend.position = "top")
+pop_plot
+```
+Over time the popularity of the genres varied widely over the years. An interesting finding is that it seems that the genres follow the same general pattern of popularity over the years. From 2005 to 2010 all the genres seem to dip largely. All genres then rose in popularity before briefly dipping again. 2013 marked a point where all genres started becoming more and more popular. The dataset only goes up to 2020, but it seems that right before the graph cuts off the genres began to decrease in popularity. EDM, despite following the same trends, was consistently less popular than Latin, R&B, pop, and rap. Rock follows a slightly different pattern and is slowly decreasing in popularity over the years.
+
+
+Static plot of our data.
+```{r}
+pop_plot1 <- ggplot(
+  data=avg.pop.bygenre.byyear,
+  aes(Year, x, group = Genre, color = factor(Genre))) +
+  geom_line() +
+  scale_color_viridis_d() +
+  labs(x = "Year", y = "Popularity") +
+  theme(legend.position = "top")
+pop_plot1
+```
+
+
+
+### Summary
+In conclusion, companies like Spotify need to put an equal amount of emphasis on every genre. There is not enough variation in the genre versus popularity time graph to conclude needing a stronger emphasis on one genre over another. Based on the time graph up to 2020, it appears that all of the 6 genres used in the data set are approaching the same average popularity per song. An improvement that can be made is one could take the average popularity of sub-genres in order to make better playlists for avid listeners.
